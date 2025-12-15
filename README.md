@@ -1,24 +1,34 @@
-```markdown
-# Go - Backend Development Task
+# User Management Backend (Go)
 
-# 🧪 User with DOB and Calculated Age
+This project is a backend service developed using Go to manage user data where the age is calculated dynamically from the date of birth instead of being stored.
 
-## 📌 Objective
-
-Build a RESTful API using Go to manage users with their `name` and `dob` (date of birth). The API should calculate and return a user’s age dynamically when fetching user details.
+The implementation focuses on clean project structure, clear separation of responsibilities, and reliable data handling.
 
 ---
 
-## 🗂️ Project Structure
+## Project Overview
 
-Please follow the directory structure below:
+The application stores user information, including date of birth, in a MySQL database.  
+Rather than persisting age, it is computed at runtime whenever user data is retrieved, ensuring accuracy over time.
 
-```
+---
+
+## Technologies Used
+
+- **Go (Fiber)** – backend framework  
+- **MySQL** – relational database  
+- **SQLC** – type-safe database access  
+- **go-playground/validator** – request validation  
+- **Uber Zap** – structured logging  
+
+---
+
+## Project Structure
 
 /cmd/server/main.go
 /config/
 /db/migrations/
-/db/sqlc/<generated>
+/db/sqlc/
 /internal/
 ├── handler/
 ├── repository/
@@ -28,137 +38,60 @@ Please follow the directory structure below:
 ├── models/
 └── logger/
 
-````
+yaml
+Copy code
+
+The structure is designed to keep responsibilities clearly separated and the codebase easy to maintain.
 
 ---
 
-## 🔧 Tech Stack
+## Database Design
 
-- [GoFiber](https://gofiber.io/)
-- SQL (MySQL or PostgreSQL) + [SQLC](https://sqlc.dev/)
-- [Uber Zap](https://github.com/uber-go/zap) for logging
-- [go-playground/validator](https://github.com/go-playground/validator) for input validation
+The application uses a single `users` table with the following fields:
 
----
+- `id` – primary key  
+- `name` – user name  
+- `dob` – date of birth  
 
-## 📊 Required Table
-
-`users` table schema:
-
-| Field | Type | Constraints |
-| --- | --- | --- |
-| id | SERIAL | PRIMARY KEY |
-| name | TEXT | NOT NULL |
-| dob | DATE | NOT NULL |
+The user’s age is **not stored** in the database.  
+It is calculated dynamically using Go’s `time` package.
 
 ---
 
-## 🔄 API Endpoints
+## Setup Summary
 
-### Create User
+For this project:
 
-**POST** `/users`
+- Go (version 1.21 or higher) was installed  
+- MySQL was installed and configured  
+- Required environment variables were set  
+- Database schema was applied using migration files  
 
-**Request:**
+**Key Highlights:**
 
-```json
-{
-  "name": "Alice",
-  "dob": "1990-05-10"
-}
-````
-
-**Response:**
-
-```json
-{
-  "id": 1,
-  "name": "Alice",
-  "dob": "1990-05-10"
-}
-```
+- Dynamic age calculation without storing redundant data  
+- Type-safe database interactions using SQLC  
+- Input validation at the API boundary  
+- Structured logging for better observability  
+- Clean separation between HTTP, service, and data layers  
 
 ---
 
-### Get User by ID
+## What This Project Demonstrates
 
-**GET** `/users/:id`
+- Backend development using Go  
+- MySQL database integration  
+- Clean and maintainable project architecture  
+- Practical implementation of backend best practices  
 
-**Response:**
-
-```json
-{
-  "id": 1,
-  "name": "Alice",
-  "dob": "1990-05-10",
-  "age": 35
-}
-```
+API functionality was tested locally using Postman.  
+The server runs locally and handles all user-related operations.
 
 ---
 
-### Update User
+## Running the Application
 
-**PUT** `/users/:id`
+After completing the setup, the application was started using:
 
-**Request:**
-
-```json
-{
-  "name": "Alice Updated",
-  "dob": "1991-03-15"
-}
-```
-
-**Response:**
-
-```json
-{
-  "id": 1,
-  "name": "Alice Updated",
-  "dob": "1991-03-15"
-}
-```
-
----
-
-### Delete User
-
-**DELETE** `/users/:id`
-
-**Response:**
-
-* HTTP `204 No Content`
-
----
-
-### List All Users
-
-**GET** `/users`
-
-**Response:**
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Alice",
-    "dob": "1990-05-10",
-    "age": 34
-  }
-]
-```
-
----
-
-## ✅ Requirements
-
-* Store `dob` in the database
-* Return `age` calculated dynamically using Go's `time` package
-* Use SQLC for generating DB access layer
-* Validate inputs with `go-playground/validator`
-* Log key actions using Uber Zap
-* Clean HTTP status codes and error handling
-
----
-
+```bash
+go run cmd/server/main.go
