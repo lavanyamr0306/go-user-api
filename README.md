@@ -1,6 +1,4 @@
-Got it! I’ll give you a ready-to-paste README.md that uses proper bolding and horizontal lines (---) to separate sections.
 
-This version is safe for GitHub and VS Code, and everything will render correctly.
 
 # **User Management Backend (Go)**
 
