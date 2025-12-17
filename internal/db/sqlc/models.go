@@ -2,14 +2,14 @@
 // versions:
 //   sqlc v1.30.0
 
-package db
+package sqlc
 
 import (
 	"time"
 )
 
 type User struct {
-	ID   int32     `json:"id"`
-	Name string    `json:"name"`
-	Dob  time.Time `json:"dob"`
+	ID   int32
+	Name string
+	Dob  time.Time
 }

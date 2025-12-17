@@ -1,11 +1,8 @@
 package routes
 
-package routes
-
 import (
 	"github.com/gofiber/fiber/v2"
-
-	"go-user-api/internal/handler"
+	"github.com/lavanyamr0306/go-user-api/internal/handler"
 )
 
 func RegisterRoutes(app *fiber.App, userHandler *handler.UserHandler) {

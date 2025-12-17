@@ -1,17 +1,18 @@
 package service
 
 import (
+	"context"
 	"time"
 
-	"go-user-api/db/sqlc"
-	"go-user-api/internal/models"
+	db "github.com/lavanyamr0306/go-user-api/internal/db/sqlc"
+	"github.com/lavanyamr0306/go-user-api/internal/models"
 )
 
 type UserService struct {
-	store *sqlc.Queries
+	store *db.Queries
 }
 
-func NewUserService(store *sqlc.Queries) *UserService {
+func NewUserService(store *db.Queries) *UserService {
 	return &UserService{store: store}
 }
 
@@ -26,9 +27,9 @@ func calculateAge(dob time.Time) int {
 }
 
 // Convert SQLC user to models.User with age
-func toModel(user sqlc.User) models.User {
+func toModel(user db.User) models.User {
 	return models.User{
-		ID:   user.ID,
+		ID:   int(user.ID),
 		Name: user.Name,
 		DOB:  user.Dob,
 		Age:  calculateAge(user.Dob),
@@ -36,8 +37,8 @@ func toModel(user sqlc.User) models.User {
 }
 
 // List Users
-func (s *UserService) ListUsers() ([]models.User, error) {
-	users, err := s.store.ListUsers()
+func (s *UserService) ListUsers(ctx context.Context) ([]models.User, error) {
+	users, err := s.store.ListUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +50,8 @@ func (s *UserService) ListUsers() ([]models.User, error) {
 }
 
 // Get User by ID
-func (s *UserService) GetUser(id int) (models.User, error) {
-	user, err := s.store.GetUserByID(int32(id))
+func (s *UserService) GetUser(ctx context.Context, id int32) (models.User, error) {
+	user, err := s.store.GetUserByID(ctx, id)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -58,16 +59,25 @@ func (s *UserService) GetUser(id int) (models.User, error) {
 }
 
 // Create User
-func (s *UserService) CreateUser(name string, dob time.Time) error {
-	return s.store.CreateUser(name, dob)
+func (s *UserService) CreateUser(ctx context.Context, name string, dob time.Time) error {
+	params := db.CreateUserParams{
+		Name: name,
+		Dob:  dob,
+	}
+	return s.store.CreateUser(ctx, params)
 }
 
 // Update User
-func (s *UserService) UpdateUser(id int, name string, dob time.Time) error {
-	return s.store.UpdateUser(name, dob, int32(id))
+func (s *UserService) UpdateUser(ctx context.Context, id int32, name string, dob time.Time) error {
+	params := db.UpdateUserParams{
+		ID:   id,
+		Name: name,
+		Dob:  dob,
+	}
+	return s.store.UpdateUser(ctx, params)
 }
 
 // Delete User
-func (s *UserService) DeleteUser(id int) error {
-	return s.store.DeleteUser(int32(id))
+func (s *UserService) DeleteUser(ctx context.Context, id int32) error {
+	return s.store.DeleteUser(ctx, id)
 }

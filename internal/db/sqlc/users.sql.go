@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: users.sql
 
-package db
+package sqlc
 
 import (
 	"context"
@@ -16,12 +16,12 @@ VALUES (?, ?)
 `
 
 type CreateUserParams struct {
-	Name string    `json:"name"`
-	Dob  time.Time `json:"dob"`
+	Name string
+	Dob  time.Time
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.exec(ctx, q.createUserStmt, createUser, arg.Name, arg.Dob)
+	_, err := q.db.ExecContext(ctx, createUser, arg.Name, arg.Dob)
 	return err
 }
 
@@ -31,7 +31,7 @@ WHERE id = ?
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
-	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, id)
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
 }
 
@@ -42,7 +42,7 @@ WHERE id = ?
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
-	row := q.queryRow(ctx, q.getUserByIDStmt, getUserByID, id)
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(&i.ID, &i.Name, &i.Dob)
 	return i, err
@@ -54,7 +54,7 @@ FROM users
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.query(ctx, q.listUsersStmt, listUsers)
+	rows, err := q.db.QueryContext(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -83,12 +83,12 @@ WHERE id = ?
 `
 
 type UpdateUserParams struct {
-	Name string    `json:"name"`
-	Dob  time.Time `json:"dob"`
-	ID   int32     `json:"id"`
+	Name string
+	Dob  time.Time
+	ID   int32
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
-	_, err := q.exec(ctx, q.updateUserStmt, updateUser, arg.Name, arg.Dob, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateUser, arg.Name, arg.Dob, arg.ID)
 	return err
 }
