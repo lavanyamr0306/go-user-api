@@ -1,104 +1,224 @@
 
-# User Management Backend (Go)
 
-This project is a backend service developed in Go to manage user data, where a user's age is calculated dynamically from the date of birth instead of being stored in the database.
+```md
+# Go User API 🚀
 
-The design emphasizes a clean project structure, clear separation of concerns, and reliable handling of data.
+A RESTful User Management API built using **GoFiber**, **SQLC**, and **MySQL**, which stores user details (`name`, `dob`) and dynamically calculates the **age** using Go’s `time` package.
 
----
-
-## Project Overview
-
-The application stores user information, including date of birth, in a MySQL database.  
-Instead of storing age, it is computed at runtime whenever user data is retrieved, ensuring it is always accurate.
+This project follows **clean architecture**, includes **Docker support**, **pagination**, **middleware**, and **unit tests**, making it production-ready and interview-friendly.
 
 ---
 
-## Technologies Used
+## 📌 Features
 
-- **Go (Fiber)** – backend framework  
-- **MySQL** – relational database  
-- **SQLC** – type-safe database access  
-- **go-playground/validator** – request validation  
-- **Uber Zap** – structured logging  
+- CRUD operations for Users
+- Dynamic age calculation (not stored in DB)
+- Clean layered architecture (handler, service, repository)
+- SQLC for type-safe database access
+- Input validation using go-playground/validator
+- Structured logging using Uber Zap
+- Pagination support for listing users
+- Docker & Docker Compose support
+- Middleware for:
+  - Request ID injection
+  - Request duration logging
+- Unit tests for age calculation
 
 ---
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```
 
-/cmd/server/main.go
-/config/
-/db/migrations/
-/db/sqlc/
-/internal/
-├── handler/
-├── repository/
-├── service/
-├── routes/
-├── middleware/
-├── models/
-└── logger/
+go-user-api/
+├── cmd/server/main.go
+├── config/
+├── db/
+│   ├── migrations/
+│   └── sqlc/
+├── internal/
+│   ├── handler/
+│   ├── service/
+│   ├── repository/
+│   ├── routes/
+│   ├── middleware/
+│   ├── models/
+│   └── logger/
+├── docker-compose.yaml
+├── Dockerfile
+├── sqlc.yaml
+├── go.mod
+└── go.sum
 
 ````
 
-The structure ensures responsibilities are clearly separated and the codebase is easy to maintain.
+---
+
+## 🔧 Tech Stack
+
+- **Language:** Go
+- **Framework:** GoFiber
+- **Database:** MySQL
+- **ORM:** SQLC
+- **Logging:** Uber Zap
+- **Validation:** go-playground/validator
+- **Containerization:** Docker & Docker Compose
+- **Testing:** Go testing package
 
 ---
 
-## Database Design
+## 🗃️ Database Schema
 
-The application uses a single `users` table with the following fields:
+### `users` table
 
-- `id` – primary key  
-- `name` – user name  
-- `dob` – date of birth  
-
-The user's **age is not stored** in the database; it is calculated dynamically using Go’s `time` package whenever needed.
-
----
-
-## Setup Summary
-
-To run this project:
-
-- Install **Go** (version 1.21 or higher)  
-- Install and configure **MySQL**  
-- Set the required environment variables  
-- Apply database schema using migration files  
-
-**Key Features:**
-
-- Dynamic age calculation without storing redundant data  
-- Type-safe database interactions with SQLC  
-- Input validation at the API boundary  
-- Structured logging using Uber Zap  
-- Clear separation between HTTP, service, and data layers  
+| Field | Type | Constraints |
+|------|------|-------------|
+| id | SERIAL | Primary Key |
+| name | TEXT | NOT NULL |
+| dob | DATE | NOT NULL |
 
 ---
 
-## What This Project Demonstrates
+## 🔄 API Endpoints
 
-- Backend development with Go and Fiber  
-- Integration with a MySQL database  
-- Maintainable and clean project architecture  
-- Practical backend best practices  
+### ➕ Create User
+**POST** `/users`
 
-API functionality has been tested locally using Postman.  
-The server runs locally and handles all user-related operations efficiently.
+```json
+{
+  "name": "Alice",
+  "dob": "1990-05-10"
+}
+````
 
 ---
 
-## Running the Application
+### 📄 Get User by ID
 
-After completing setup, start the server with:
+**GET** `/users/:id`
+
+```json
+{
+  "id": 1,
+  "name": "Alice",
+  "dob": "1990-05-10",
+  "age": 35
+}
+```
+
+---
+
+### ✏️ Update User
+
+**PUT** `/users/:id`
+
+```json
+{
+  "name": "Alice Updated",
+  "dob": "1991-03-15"
+}
+```
+
+---
+
+### ❌ Delete User
+
+**DELETE** `/users/:id`
+
+**Response:** `204 No Content`
+
+---
+
+### 📃 List Users (Pagination)
+
+**GET** `/users?page=1&limit=10`
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Alice",
+    "dob": "1990-05-10",
+    "age": 34
+  }
+]
+```
+
+---
+
+## 🧮 Age Calculation Logic
+
+* Age is **calculated dynamically**
+* Uses Go’s `time` package
+* Age is NOT stored in the database
+* Unit tested for correctness
+
+---
+
+## 🧪 Run Unit Tests
 
 ```bash
-go run cmd/server/main.go
-````
-
+go test ./...
 ```
 
+---
 
+## 🐳 Docker Setup
+
+### Build & Run using Docker Compose
+
+```bash
+docker-compose up --build
 ```
+
+* API runs on: `http://localhost:8080`
+* MySQL runs on: `localhost:3306`
+
+---
+
+## 🛡️ Middleware
+
+### Request ID Middleware
+
+* Adds `X-Request-ID` to every response
+
+### Request Logger Middleware
+
+* Logs:
+
+  * HTTP method
+  * Path
+  * Request duration
+  * Request ID
+
+---
+
+## 📦 SQLC
+
+Generate SQLC code using:
+
+```bash
+sqlc generate
+```
+
+---
+
+## 🧠 Key Learnings
+
+* Clean architecture in Go
+* Type-safe DB access with SQLC
+* Dockerizing Go applications
+* Writing middleware in Fiber
+* Pagination implementation
+* Unit testing business logic
+
+---
+
+## 👤 Author
+
+**Lavanya M R**
+GitHub: [https://github.com/lavanyamr0306](https://github.com/lavanyamr0306)
+
+---
+
+
