@@ -1,70 +1,131 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/lavanyamr0306/Go-Backend/config"
+	"github.com/lavanyamr0306/Go-Backend/internal/handler"
+	"github.com/lavanyamr0306/Go-Backend/internal/logger"
+	"github.com/lavanyamr0306/Go-Backend/internal/repository"
+	"github.com/lavanyamr0306/Go-Backend/internal/routes"
+	"github.com/lavanyamr0306/Go-Backend/internal/service"
 	"go.uber.org/zap"
-
-	"github.com/lavanyamr0306/go-user-api/internal/db/sqlc" // SQLC package
-	"github.com/lavanyamr0306/go-user-api/internal/handler"
-	"github.com/lavanyamr0306/go-user-api/internal/routes"
-	"github.com/lavanyamr0306/go-user-api/internal/service"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
-	// Load .env
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	// Initialize logger
+	if err := logger.InitLogger(); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
 	}
+	defer logger.Log.Sync()
 
-	// Logger
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-	sugar := logger.Sugar()
-
-	// Database connection
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbUser := os.Getenv("DB_USER")
-	dbPass := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
-
-	dsn := dbUser + ":" + dbPass + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?parseTime=true"
-	conn, err := sql.Open("mysql", dsn)
+	// Load configuration
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		sugar.Fatalw("cannot connect to db", "error", err)
+		logger.Log.Fatal("Failed to load configuration", zap.Error(err))
 	}
-	defer conn.Close()
 
-	// SQLC queries
-	queries := sqlc.New(conn)
+	// Create a context that listens for the interrupt signal
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// Services & Handlers
-	userService := service.NewUserService(queries)
-	userHandler := handler.NewUserHandler(userService)
+	logger.Log.Info("Starting User API Server...")
 
-	// Fiber app
-	app := fiber.New()
+	// Initialize database connection
+	db, err := sql.Open("mysql", cfg.GetDSN())
+	if err != nil {
+		logger.Log.Fatal("Failed to connect to database", zap.Error(err))
+	}
 
-	// Routes
-	routes.RegisterRoutes(app, userHandler)
+	// Test database connection
+	if err := db.PingContext(ctx); err != nil {
+		logger.Log.Fatal("Failed to ping database", zap.Error(err))
+	}
 
-	// Health endpoint
-	app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok"})
+	// Initialize repository, service, and handler
+	userRepo := repository.NewUserRepository(db)
+	userService := service.NewUserService(*userRepo)
+	userHandler := handler.NewUserHandler(userService, logger.Log)
+
+	// Initialize Fiber app with context support
+	app := fiber.New(fiber.Config{
+		AppName:               "User API",
+		ErrorHandler:          errorHandler,
+		DisableStartupMessage: true,
 	})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "9000"
+	// Middleware
+	app.Use(recover.New())
+	app.Use(requestid.New())
+
+	// Add context to each request
+	app.Use(func(c *fiber.Ctx) error {
+		// Set the context with timeout for each request
+		reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		// Set the context in the locals
+		c.Locals("ctx", reqCtx)
+
+		// Override c.UserContext to return our context
+		c.SetUserContext(reqCtx)
+
+		return c.Next()
+	})
+
+	// Setup routes
+	routes.SetupRoutes(app, userHandler, logger.Log)
+
+	// Start server in a goroutine
+	serverShutdown := make(chan error, 1)
+	go func() {
+		addr := "0.0.0.0:" + cfg.GetPort()
+		logger.Log.Info("Server starting", zap.String("address", addr))
+		if err := app.Listen(addr); err != nil {
+			serverShutdown <- fmt.Errorf("server error: %w", err)
+		}
+	}()
+
+	// Wait for interrupt signal or server error
+	select {
+	case <-ctx.Done():
+		logger.Log.Info("Received shutdown signal")
+	case err := <-serverShutdown:
+		logger.Log.Error("Server error", zap.Error(err))
 	}
 
-	sugar.Infow("server started", "port", port)
-	log.Fatal(app.Listen(":" + port))
+	// Create a deadline for graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown
+	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
+		logger.Log.Error("Server forced to shutdown", zap.Error(err))
+	}
+
+	// Close database connection
+	if err := db.Close(); err != nil {
+		logger.Log.Error("Error closing database connection", zap.Error(err))
+	}
+
+	logger.Log.Info("Server gracefully stopped")
 }
+
+func errorHandler(c *fiber.Ctx, err error) error {
+	logger.Log.Error("Unhandled error", zap.Error(err))
+	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		"error": "Internal server error",
+	})
+}
+
